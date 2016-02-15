@@ -133,7 +133,6 @@ class Adv_Term_Fields_Locks extends Advanced_Term_Fields
 #add_filter( 'map_meta_cap' , array($this, 'map_meta_cap'), 999, 4 );
 add_action ( 'pre_delete_term', array($this, 'maybe_prevent_delete'), 99, 2 );
 
-		$this->remove_bulk_actions( $this->allowed_taxonomies );
 		$this->filter_term_name();
 		$this->filter_table_row_actions( $this->allowed_taxonomies );
 	}
@@ -693,62 +692,12 @@ return $name;
 	}
 
 
-public function remove_bulk_actions( $allowed_taxonomies )
-{
-	if ( ! empty( $allowed_taxonomies ) ) :
-		foreach ( $allowed_taxonomies as $tax_name ) {
-			add_filter( "bulk_actions-edit-{$tax_name}", array( $this, 'maybe_filter_bulk_actions' ) );
-			add_filter( "manage_edit-{$tax_name}_columns", array( $this, 'remove_cb_col' ) );
-			add_filter( "manage_{$tax_name}_custom_column", array( $this, 'redo_name_column' ), 10, 3 );
-			add_filter( 'list_table_primary_column', array( $this, 'get_primary_col'), 10, 2);
-		}
-	endif;
-
-	return $allowed_taxonomies;
-}
-
-public function get_primary_col( $default, $screen_id )
-{
-	$default = 'atf-name';
-
-	return $default;
-
-_debug( $default );
-_debug( $screen_id );
-}
 
 
-public function maybe_filter_bulk_actions( $actions )
-{
-	unset( $actions['delete'] );
-	return $actions;
-}
 
-public function remove_cb_col( $columns )
-{
-	$new = array();
-	
-	unset( $columns['name'] );
-	unset( $columns['cb'] );
-	
-	foreach( $columns as $key => $title ){
-		if( 'description' === $key ) {
-			$new['atf-name'] = 'Name';
-		}
-		$new[$key] = $title;
-	}
 
-	return $new;
-}
 
-public function redo_name_column( $empty = '', $column_name = '', $term_id = 0 )
-{
-	if ( empty( $_REQUEST['taxonomy'] ) || ( 'atf-name' !== $column_name ) || ! empty( $empty ) ) {
-		return;
-	}
 
-	echo $term_id;
 
-}
 
 }
