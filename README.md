@@ -1,4 +1,4 @@
-# Advanced Term Fields: Icons
+# Advanced Term Fields: Locks
 
 Easily assign icons for categories, tags, and custom taxonomy terms. Term meta, iconified!
 
