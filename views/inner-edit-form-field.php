@@ -11,9 +11,14 @@
  */
 
 $meta_value = $this->get_meta( $term->term_id );
-$icon = sprintf(
-	'<i data-icon="%1$s" class="term-icon dashicons %1$s"></i>',
-	esc_attr( $meta_value )
-);
+$lock = $this->create_term_lock();
 ?>
-[edit form field]
+
+<ul>
+	<li>
+		<label>
+			<input type="checkbox" name="<?php echo esc_attr( $this->meta_key ); ?>" id="<?php echo esc_attr( $this->meta_slug ); ?>-edit" value="<?php echo esc_attr( $lock ); ?>" <?php checked( !empty($meta_value) ); ?>/>
+			<span class="term-lock-edit"><?php esc_html_e( 'Edit Lock', 'atf-locks' ); ?></span>
+		</label>
+	</li>
+</ul>

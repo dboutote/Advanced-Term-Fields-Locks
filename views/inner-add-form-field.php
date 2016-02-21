@@ -9,8 +9,7 @@
  *
  * @since 0.1.0
  */
-?>
-<?php 
+
 $lock = $this->create_term_lock();
 ?>
 

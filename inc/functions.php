@@ -13,8 +13,8 @@
 function _atf_locks_compatibility_check() {
 
 	if ( ! class_exists( 'Advanced_Term_Fields' ) ) {
-		add_action( 'admin_init', '_atf_locks_plugin_deactivate');
-		add_action( 'admin_notices', '_atf_locks_plugin_compatibility_notice');
+		add_action( 'admin_init', '_atf_locks_plugin_deactivate' );
+		add_action( 'admin_notices', '_atf_locks_plugin_compatibility_notice' );
 		return false;
 	};
 
@@ -80,9 +80,9 @@ function _atf_locks_version_upgraded_notice( $updated, $db_version_key, $plugin_
 			$plugin_version
 		);
 
-		add_action('admin_notices', function() use ( $display_msg ) {
+		add_action( 'admin_notices', function() use ( $display_msg ) {
 			echo $display_msg;
-		});
+		} );
 
 	}
 }
@@ -104,3 +104,4 @@ function _atf_manage_term_lock_cap( $cap ){
 }
 add_filter( "atf_delete_term_lock_cap",  '_atf_manage_term_lock_cap' );
 add_filter( "atf_manage_term_lock_cap",  '_atf_manage_term_lock_cap' );
+add_filter( "atf_update_term_lock_cap",  '_atf_manage_term_lock_cap' );

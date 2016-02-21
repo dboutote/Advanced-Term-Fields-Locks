@@ -32,7 +32,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * @internal Nobody should be able to overrule the real version number
  * as this can cause serious issues, so no if ( ! defined() )
  *
- * @since 0.1.2
+ * @since 0.1.0
  */
 define( 'ATF_LOCKS_VERSION', '0.1.0' );
 

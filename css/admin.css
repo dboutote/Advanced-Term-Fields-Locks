@@ -1,3 +1,11 @@
 <style type="text/css">
-	.row-title .dashicons-lock { font-size: 75%; height: auto; width: auto; }
+	.row-title .dashicons-lock,
+	#the-list .dashicons-lock { font-size: 75%; height: auto; width: auto; }
+	.inline-edit-row span.term-locked-err {
+		background-color: #fbeaea;
+		border: 1px solid #dc3232;
+		border-radius: 3px;
+		display: inline-block;
+		padding: 2px 10px;
+	}
 </style>
