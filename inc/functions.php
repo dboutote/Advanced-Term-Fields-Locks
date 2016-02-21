@@ -74,14 +74,14 @@ function _atf_locks_plugin_compatibility_notice() {
 function _atf_locks_version_upgraded_notice( $updated, $db_version_key, $plugin_version, $db_version, $meta_key ){
 	if ( $updated ) {
 
-		$display_msg = sprintf(
+		$_msg = sprintf(
 			'<div class="updated notice is-dismissible"><p><b>%1$s</b> has been upgraded to version <b>%2$s</b></p></div>',
 			__( 'Advanced Term Fields: Locks', 'atf-locks' ),
 			$plugin_version
 		);
 
-		add_action( 'admin_notices', function() use ( $display_msg ) {
-			echo $display_msg;
+		add_action( 'admin_notices', function() use ( $_msg ) {
+			echo $_msg;
 		} );
 
 	}
@@ -102,6 +102,6 @@ function _atf_manage_term_lock_cap( $cap ){
 	}
 	return $cap;
 }
-add_filter( "atf_delete_term_lock_cap",  '_atf_manage_term_lock_cap' );
-add_filter( "atf_manage_term_lock_cap",  '_atf_manage_term_lock_cap' );
-add_filter( "atf_update_term_lock_cap",  '_atf_manage_term_lock_cap' );
+add_filter( "atf_locks_term_delete_cap",  '_atf_manage_term_lock_cap' );
+add_filter( "atf_locks_term_manage_cap",  '_atf_manage_term_lock_cap' );
+add_filter( "atf_locks_term_update_cap",  '_atf_manage_term_lock_cap' );
