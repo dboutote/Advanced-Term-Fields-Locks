@@ -146,7 +146,79 @@ class Adv_Term_Fields_Locks extends Advanced_Term_Fields
 		$this->check_term_delete();
 		$this->check_edit_screen();
 		$this->check_term_update();
+
+		#$this->remove_bulk_actions( $this->allowed_taxonomies );
 	}
+
+public function remove_bulk_actions( $allowed_taxonomies )
+{
+	if ( ! empty( $allowed_taxonomies ) ) :
+		foreach ( $allowed_taxonomies as $tax_name ) {
+			add_filter( "manage_edit-{$tax_name}_columns", array( $this, 'remove_cb_col' ) );
+			add_filter( "manage_{$tax_name}_custom_column", array( $this, 'redo_cb_column' ), 10, 3 );
+		}
+	endif;
+
+	return $allowed_taxonomies;
+}
+
+public function remove_cb_col( $columns )
+{
+	$new = array();
+
+	unset( $columns['cb'] );
+
+	foreach( $columns as $key => $title ){
+		if( 'name' === $key ) {
+			$new['atf-cb'] = '<input type="checkbox" />';
+		}
+		$new[$key] = $title;
+	}
+
+	return $new;
+}
+
+public function redo_cb_column( $empty = '', $column_name = '', $term_id = 0 )
+{
+	if ( empty( $_REQUEST['taxonomy'] ) || ( 'atf-cb' !== $column_name ) || ! empty( $empty ) ) {
+		return;
+	}
+
+	$taxonomy = $this->get_current_taxonomy();
+	$tag = get_term( $term_id, $taxonomy );
+	$default_term = get_option( 'default_' . $taxonomy );
+	$lock = get_term_meta( $term_id, $this->meta_key, true );
+
+	// if the current user can delete terms
+	if ( current_user_can( get_taxonomy( $taxonomy )->cap->delete_terms ) && $term_id != $default_term ) :
+	
+		// if the current user can delete THIS term
+		$cap = apply_filters( "atf_locks_term_delete_cap", "manage_others_term_locks" );
+		$user_can_delete = $this->_user_can( $cap, $term_id, $taxonomy, $lock );
+		
+		if ( $user_can_delete ) {
+
+			$field = sprintf( '<label class="screen-reader-text" for="cb-select-%1$s">%2$s %3$s</label>',
+				$term_id,
+				__('Select', 'atf-locks'),
+				$tag->name
+			);
+
+			$field .= sprintf( '<input type="checkbox" name="delete_tags[]" value="%1$d" id="cb-select-%1$d" />',
+				$term_id
+			);
+
+			return $field;
+		
+		};
+
+	endif;
+
+return '&nbsp;';
+
+
+
+}
 
 
 	/**
@@ -159,7 +231,7 @@ class Adv_Term_Fields_Locks extends Advanced_Term_Fields
 	 *
 	 * @access public
 	 *
-	 * @since 0.1.2
+	 * @since 0.1.0
 	 *
 	 * @return void
 	 */
@@ -180,10 +252,9 @@ class Adv_Term_Fields_Locks extends Advanced_Term_Fields
 	 * @uses WordPress get_option()
 	 * @uses Adv_Term_Fields_Locks::upgrade_version()
 	 *
-	 *
 	 * @access public
 	 *
-	 * @since 0.1.2
+	 * @since 0.1.0
 	 *
 	 * @return void
 	 */
@@ -206,7 +277,9 @@ class Adv_Term_Fields_Locks extends Advanced_Term_Fields
 	 *
 	 * @uses WordPress update_option()
 	 *
-	 * @since 0.1.2
+	 * @access public
+	 *
+	 * @since 0.1.0
 	 *
 	 * @param string $db_version_key The database key for the plugin version.
 	 * @param string $plugin_version The most recent plugin version.
@@ -275,7 +348,7 @@ class Adv_Term_Fields_Locks extends Advanced_Term_Fields
 
 
 	/**
-	  * Prints out CSS styles in admin head
+	 * Prints out CSS styles in admin head
 	 *
 	 * Note: Only loads on edit-tags.php
 	 *
@@ -296,7 +369,6 @@ class Adv_Term_Fields_Locks extends Advanced_Term_Fields
 	}
 
 
-	/**
 	/**
 	 * Displays inner form field on Add Term form
 	 *
@@ -383,10 +455,11 @@ class Adv_Term_Fields_Locks extends Advanced_Term_Fields
 	/**
 	 * Creates the value of the term lock
 	 *
+	 * @access public
+	 *
 	 * @since 0.1.0
 	 *
-	 * @return mixed $lock Empty string if no user ID is detected,
-	 *                     string hash of user ID & current time if successful.
+	 * @return string $lock Empty if no user is detected, hash of current time|user ID if successful.
 	 */
 	public function create_term_lock()
 	{
@@ -409,6 +482,10 @@ class Adv_Term_Fields_Locks extends Advanced_Term_Fields
 	/**
 	 * Retrieves current taxonomy
 	 *
+	 * Note: Not used as of 0.1.0
+	 *
+	 * @access public
+	 *
 	 * @since 0.1.0
 	 *
 	 * @return string $current_taxonomy The current taxonomy.
@@ -419,17 +496,17 @@ class Adv_Term_Fields_Locks extends Advanced_Term_Fields
 
 		$current_taxonomy = $taxnow;
 
-		if( '' === $current_taxonomy ) {
-			$current_taxonomy = ( ! empty( $_POST['taxonomy'] ) )? $_POST['taxonomy'] : '';
-		}
+		if( '' === $current_taxonomy || is_null( $current_taxonomy ) ) {
+			$current_taxonomy = ( ! empty( $_REQUEST['taxonomy'] ) )? esc_attr( $_REQUEST['taxonomy'] ) : '';
+		};
 
 		if( '' === $current_taxonomy && function_exists( 'get_current_screen' ) ) {
 			$current_taxonomy = get_current_screen()->taxonomy;
-		}
+		};
 
 		if( is_null( $current_taxonomy ) ) {
 			$current_taxonomy = '';
-		}
+		};
 
 		return $current_taxonomy;
 	}
@@ -441,6 +518,8 @@ class Adv_Term_Fields_Locks extends Advanced_Term_Fields
 	 *
 	 * @see Adv_Term_Fields_Locks::maybe_prevent_term_delete()
 	 * @see WordPress wp_delete_term()
+	 *
+	 * @access public
 	 *
 	 * @since 0.1.0
 	 *
@@ -455,16 +534,9 @@ class Adv_Term_Fields_Locks extends Advanced_Term_Fields
 	/**
 	 * Prevents deletion of term
 	 *
-	 * Applies filter "atf_delete_term_lock_cap" to allow other plugins to filter the capability.
+	 * Applies filter "atf_locks_term_delete_cap" to allow other plugins to filter the capability.
 	 *
-	 * Checks happen in this order:
-	 * - no lock: allow delete
-	 * - no current user: prevent delete
-	 * - current user matches lock author: allow delete
-	 * - current user can manage others term locks: allow delete
-	 * - current user does not match lock author: prevent delete
-	 *
-	 * @uses Adv_Term_Fields_Locks::prevent_delete_msg()
+	 * @uses Adv_Term_Fields_Locks::get_prevent_msg()
 	 *
 	 * @access public
 	 *
@@ -483,16 +555,17 @@ class Adv_Term_Fields_Locks extends Advanced_Term_Fields
 		if ( ! $lock = get_term_meta( $term_id, $this->meta_key, true ) ) {
 			return $term_id;
 		};
-		
-		$cap = apply_filters("atf_delete_term_lock_cap", "manage_others_term_locks");
+
+		$cap = apply_filters( "atf_locks_term_delete_cap", "manage_others_term_locks" );
 		$user_can_delete = $this->_user_can( $cap, $term_id, $taxonomy, $lock );
-		
+
 		if ( ! $user_can_delete ) :
 			if ( defined('DOING_AJAX') && DOING_AJAX ) {
 				wp_die( -1 );
 			} else {
-				wp_die( $this->prevent_delete_msg(), 403 );
-			}
+				$_msg = $this->get_prevent_msg( $action = 'delete' );
+				wp_die( $_msg, 403 );
+			};
 		endif;
 
 		return $term_id;
@@ -500,27 +573,11 @@ class Adv_Term_Fields_Locks extends Advanced_Term_Fields
 
 
 	/**
-	 * Displays message during term delete
-	 *
-	 * @since 0.1.0
-	 *
-	 * @return string Message for user.
-	 */
-	public function prevent_delete_msg( $term_id, $taxonomy )
-	{
-		$_msg = sprintf( '<h1>%s</h1><p>%s</p>',
-			__( 'Locked Term', 'atf-locks' ),
-			__( 'One or more of the selected terms are locked.  You are not allowed to delete.', 'atf-locks' )
-		);
-
-		return apply_filters( 'atf_unauthorized_term_delete_msg', $_msg );
-	}
-
-
-	/**
 	 * Filters term name
 	 *
 	 * @see Adv_Term_Fields_Locks::term_name()
+	 *
+	 * @access public
 	 *
 	 * @since 0.1.0
 	 *
@@ -533,26 +590,35 @@ class Adv_Term_Fields_Locks extends Advanced_Term_Fields
 
 
 	/**
-	* Filters term name
-	*
-	* Appends a dashicon lock icon to the end of locked term names in Terms List Table.
-	*
-	* @since 0.1.0
-	*
-	* @param string $name The term name, padded if not top-level.
-	* @param object $term Term object.
-	*
-	* @todo: FIX THIS
-	*
-	* @return string $name The filtered term name.
-	*/
+	 * Filters term name
+	 *
+	 * Appends a dashicon lock icon to the end of locked term names in Terms List Table.
+	 *
+	 * @access public
+	 *
+	 * @since 0.1.0
+	 *
+	 * @param string $name The term name, padded if not top-level.
+	 * @param object $term Term object.
+	 *
+	 * @return string $name The filtered term name.
+	 */
 	public function maybe_filter_term_name( $name = '', $term = null )
 	{
+		if ( ! is_object( $term ) ) {
+			return $name;
+		};
+
 		$lock = get_term_meta( $term->term_id, $this->meta_key, true );
 
 		if ( $lock ) {
-			$name .= ' <span class="dashicons dashicons-lock"></span>';
-		}
+			$cap = apply_filters( "atf_locks_term_manage_cap", "manage_others_term_locks" );
+			$user_can_manage = $this->_user_can( $cap, $term->term_id, $term->taxonomy, $lock );
+
+			$dashicon = ( $user_can_manage ) ? ' dashicons-unlock' : '' ;
+
+			$name .= ' <span class="dashicons dashicons-lock'.$dashicon.'"></span>';
+		};
 
 		return $name;
 	}
@@ -562,6 +628,8 @@ class Adv_Term_Fields_Locks extends Advanced_Term_Fields
 	 * Filters table row actions
 	 *
 	 * @see Adv_Term_Fields_Locks::maybe_filter_row_actions()
+	 *
+	 * @access public
 	 *
 	 * @since 0.1.0
 	 *
@@ -584,13 +652,8 @@ class Adv_Term_Fields_Locks extends Advanced_Term_Fields
 	 *
 	 * Removes edit|quick edit|delete links from table row actions if current user can't manage
 	 * locked terms.
-	 *
-	 * Checks happen in this order:
-	 * - no lock: allow actions
-	 * - no current user: filter actions
-	 * - current user matches lock author: allow actions
-	 * - current user can manage others term locks: allow actions
-	 * - current user does not match lock author: filter actions
+	 * Applies filter "atf_allowed_row_actions" to allow other plugins to filter the allowed actions.
+	 * Applies filter "atf_locks_term_manage_cap" to allow other plugins to filter the capability.
 	 *
 	 * @access public
 	 *
@@ -603,22 +666,21 @@ class Adv_Term_Fields_Locks extends Advanced_Term_Fields
 	 */
 	public function maybe_filter_row_actions( $actions, $term )
 	{
-		
 		// If no lock, return $actions
 		if ( ! $lock = get_term_meta( $term->term_id, $this->meta_key, true ) ) {
 			return $actions;
 		}
 
-		$allowed_actions = apply_filters( 'atf_allowed_row_actions', array('view') );
-		$filtered_actions = array_intersect_key( $actions, array_flip($allowed_actions));
-		
-		$cap = apply_filters("atf_manage_term_lock_cap", "manage_others_term_locks");
+		$allowed_actions = apply_filters( "atf_allowed_row_actions", array('view') );
+		$filtered_actions = array_intersect_key( $actions, array_flip($allowed_actions) );
+
+		$cap = apply_filters( "atf_locks_term_manage_cap", "manage_others_term_locks" );
 		$user_can_action = $this->_user_can( $cap, $term->term_id, $term->taxonomy, $lock );
-		
+
 		if ( ! $user_can_action ) {
 			return $filtered_actions;
 		};
-		
+
 		return $actions;
 	}
 
@@ -627,6 +689,8 @@ class Adv_Term_Fields_Locks extends Advanced_Term_Fields
 	 * Prevents access to Edit Tags screen
 	 *
 	 * @see Adv_Term_Fields_Locks::maybe_prevent_edit_screen()
+	 *
+	 * @access public
 	 *
 	 * @since 0.1.0
 	 *
@@ -642,21 +706,16 @@ class Adv_Term_Fields_Locks extends Advanced_Term_Fields
 	/**
 	 * Prevents unauthorized users from accessing the Edit Tags screen
 	 *
-	 * Checks happen in this order:
-	 * - no lock: allow delete
-	 * - no current user: prevent access
-	 * - current user matches lock author: allow access
-	 * - current user can manage others term locks: allow access
-	 * - current user does not match lock author: prevent access
+	 * Applies filter "atf_locks_term_manage_cap" to allow other plugins to filter the capability.
 	 *
-	 * @uses Adv_Term_Fields_Locks::prevent_edit_msg()
+	 * @uses Adv_Term_Fields_Locks::get_prevent_msg()
 	 *
 	 * @access public
 	 *
 	 * @since 0.1.0
 	 *
-	 * @return mixed null If term is not locked or user can access.
-	 *               die() If current user can't edit term or user is not detected.
+	 * @return mixed null     If term is not locked or user can access.
+	 *               wp_die() If current user can't edit term or user is not detected.
 	 */
 	public function maybe_prevent_edit_screen()
 	{
@@ -670,36 +729,17 @@ class Adv_Term_Fields_Locks extends Advanced_Term_Fields
 		if ( ! $lock = get_term_meta( $term_id, $this->meta_key, true ) ) {
 			return;
 		};
-		
+
 		$taxonomy = ( ! empty( $_GET['taxonomy'] ) ) ? esc_attr( $_GET['taxonomy'] ) : '' ;
-		
-		$cap = apply_filters("atf_manage_term_lock_cap", "manage_others_term_locks");
+
+		$cap = apply_filters( "atf_locks_term_manage_cap", "manage_others_term_locks" );
 		$user_can_edit = $this->_user_can( $cap, $term_id, $taxonomy, $lock );
 
 		if ( ! $user_can_edit ) {
-			wp_die( $this->prevent_edit_msg(), 403 );
+			$_msg = $this->get_prevent_msg( $action = 'edit' );
+			wp_die( $_msg, 403 );
 		};
-
 	}
-
-
-	/**
-	 * Displays message when trying to access Edit Tags screen
-	 *
-	 * @since 0.1.0
-	 *
-	 * @return string Message for user.
-	 */
-	public function prevent_edit_msg( $term_id, $taxonomy )
-	{
-		$_msg = sprintf( '<h1>%s</h1><p>%s</p>',
-			__( 'Locked Term', 'atf-locks' ),
-			__( 'This term is locked.  You are not allowed to edit.', 'atf-locks' )
-		);
-
-		return apply_filters( 'atf_unauthorized_term_edit_msg', $_msg );
-	}
-
 
 
 	/**
@@ -707,6 +747,8 @@ class Adv_Term_Fields_Locks extends Advanced_Term_Fields
 	 *
 	 * @see Adv_Term_Fields_Locks::maybe_prevent_term_update()
 	 * @see WordPress wp_update_term()
+	 *
+	 * @access public
 	 *
 	 * @since 0.1.0
 	 *
@@ -721,16 +763,9 @@ class Adv_Term_Fields_Locks extends Advanced_Term_Fields
 	/**
 	 * Prevents updating of term
 	 *
-	 * Applies filter "atf_update_term_lock_cap" to allow other plugins to filter the capability.
+	 * Applies filter "atf_locks_term_update_cap" to allow other plugins to filter the capability.
 	 *
-	 * Checks happen in this order:
-	 * - no lock: allow update
-	 * - no current user: prevent update
-	 * - current user matches lock author: allow update
-	 * - current user can manage others term locks: allow update
-	 * - current user does not match lock author: prevent update
-	 *
-	 * @uses Adv_Term_Fields_Locks::prevent_delete_msg()
+	 * @uses Adv_Term_Fields_Locks::get_prevent_msg()
 	 *
 	 * @access public
 	 *
@@ -739,9 +774,8 @@ class Adv_Term_Fields_Locks extends Advanced_Term_Fields
 	 * @param int    $term_id  Term ID.
 	 * @param string $taxonomy Taxonomy slug.
 	 *
-	 * @return mixed int    $term_id If current user can delete the term or term is not locked.
-	 *               object WP_Error If current user can't delete term or user is not detected.
-	 *               die()  On AJAX calls: If current user can't delete term or user is not detected.
+	 * @return mixed int      $term_id If current user can delete the term or term is not locked.
+	 *               wp_die() If current user can't delete term or user is not detected.
 	 */
 	public function maybe_prevent_term_update( $term_id, $taxonomy )
 	{
@@ -750,18 +784,21 @@ class Adv_Term_Fields_Locks extends Advanced_Term_Fields
 			return $term_id;
 		};
 
-		$cap = apply_filters("atf_update_term_lock_cap", "manage_others_term_locks");
+		$cap = apply_filters( "atf_locks_term_update_cap", "manage_others_term_locks" );
 		$user_can_update = $this->_user_can( $cap, $term_id, $taxonomy, $lock );
-
-		$_msg = sprintf( '<span class="term-locked-err">%s</span>', __( 'This term is locked.', 'atf-locks' ) );
-		$_msg = apply_filters( 'atf_unauthorized_term_update_msg_ajax', $_msg );
 
 		if ( ! $user_can_update ) :
 			if ( defined('DOING_AJAX') && DOING_AJAX ) {
-				wp_die( $_msg );
+				$_ajax_msg = sprintf( '<span class="term-locked-err">%s</span>',
+					__( 'This term is locked.', 'atf-locks' )
+				);
+				$_ajax_msg = apply_filters( "atf_unauthorized_term_update_msg_ajax", $_ajax_msg );
+				wp_die( $_ajax_msg );
 			} else {
-				wp_die( $this->prevent_update_msg(), 403 );
-			}
+				$_msg = $this->get_prevent_msg( $action = 'update' );
+				wp_die( $_msg, 403 );
+			};
+
 		endif;
 
 		return $term_id;
@@ -770,79 +807,82 @@ class Adv_Term_Fields_Locks extends Advanced_Term_Fields
 
 
 	/**
-	 * Displays message during term update
+	 * Displays unauthorized message
+	 *
+	 * @access public
 	 *
 	 * @since 0.1.0
 	 *
 	 * @return string Message for user.
 	 */
-	public function prevent_update_msg( $term_id, $taxonomy )
+	public function get_prevent_msg( $action = 'manage' )
 	{
 		$_msg = sprintf( '<h1>%s</h1><p>%s</p>',
-			__( 'Locked Term', 'atf-locks' ),
-			__( 'One or more of the selected terms are locked.  You are not allowed to update.', 'atf-locks' )
+			__( "Locked Term", 'atf-locks' ),
+			__( "One or more of the selected terms are locked.  You are not allowed to {$action}.", 'atf-locks' )
 		);
 
-		return apply_filters( 'atf_unauthorized_term_update_msg', $_msg );
+		return apply_filters( "atf_unauthorized_term_{$action}_msg", $_msg );
 	}
 
 
 
-/**
- * Checks user authorization to manage term
- *
- * Checks happen in this order:
- * - no lock: allow
- * - no current user: prevent
- * - current user matches lock author: allow
- * - current user can manage others term locks: allow
- * - current user does not match lock author: prevent
- *
- * @uses Adv_Term_Fields_Locks::prevent_delete_msg()
- *
- * @access public
- *
- * @since 0.1.0
- *
- * @param int    $term_id  Term ID.
- * @param string $taxonomy Taxonomy slug.nce 0.1.0
- *
- * @return boolean True if user is authorized, false if not.
- */
+	/**
+	 * Checks user authorization to manage term
+	 *
+	 * Checks happen in this order:
+	 * - No lock: allow
+	 * - No current user: prevent
+	 * - Current user matches lock author: allow
+	 * - Current user can manage others term locks: allow
+	 * - Current user does not match lock author: prevent
+	 *
+	 * @uses Adv_Term_Fields_Locks::prevent_delete_msg()
+	 *
+	 * @access protected
+	 *
+	 * @since 0.1.0
+	 *
+	 * @param string $capability The user_cap to check against.
+	 * @param int    $term_id  Term ID.
+	 * @param string $taxonomy Taxonomy name.
+	 * @param string $lock     The term lock hash.  Typically: "time:user_id".
+	 *
+	 * @return boolean True if user is authorized, false if not.
+	 */
 
-private function _user_can( $capability, $term_id, $taxonomy, $lock = '' )
-{
-	// no lock
-	if ( ! $lock ) {
-		return true;
+	protected function _user_can( $capability, $term_id, $taxonomy, $lock = '' )
+	{
+		// No lock
+		if ( ! $lock ) {
+			return true;
+		}
+
+		// If we can't detect the current user
+		if ( 0 == ( $current_user_id = get_current_user_id() ) ) {
+			return false;
+		};
+
+		// If the current user matches the term lock author
+		$lock = explode( ':', $lock );
+		$lock_user_id = isset( $lock[1] ) ? $lock[1] : 0;
+
+		if ( (int) $current_user_id === (int) $lock_user_id ) {
+			return true;
+		}
+
+		// If the current user can $capability
+		if ( current_user_can( $capability ) ) {
+			return true;
+		};
+
+		// If the current user doesn't match the term lock author
+		if ( (int) $current_user_id !== (int) $lock_user_id ) {
+			return false;
+		};
+
+		return;
 	}
-
-	$lock = explode( ':', $lock );
-	$lock_user_id = isset( $lock[1] ) ? $lock[1] : 0;
-
-	// If we can't detect the current user
-	if ( 0 == ( $current_user_id = get_current_user_id() ) ) {
-		return false;
-	};
-
-	// If the current user matches the term lock author
-	if ( (int) $current_user_id === (int) $lock_user_id ) {
-		return true;
-	}
-
-	// If the current user can $capability
-	if ( current_user_can( $capability ) ) {
-		return true;
-	};
-
-	// If the current user doesn't match the term lock author
-	if ( (int) $current_user_id !== (int) $lock_user_id ) {
-		return false;
-	};
-
-	return;
-
-}
 
 
 
