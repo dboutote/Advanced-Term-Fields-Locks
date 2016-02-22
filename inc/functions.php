@@ -86,22 +86,3 @@ function _atf_locks_version_upgraded_notice( $updated, $db_version_key, $plugin_
 
 	}
 }
-
-/**
- * Sets the capability for deleting terms with term locks
- *
- * @since 0.1.0
- *
- * @param string $cap The capability being filtered.  Default is "manage_others_term_locks".
- *
- * @return string $cap The filtered capability.
- */
-function _atf_manage_term_lock_cap( $cap ){
-	if( is_super_admin() ) {
-		return 'manage_categories';
-	}
-	return $cap;
-}
-add_filter( "atf_locks_term_delete_cap",  '_atf_manage_term_lock_cap' );
-add_filter( "atf_locks_term_manage_cap",  '_atf_manage_term_lock_cap' );
-add_filter( "atf_locks_term_update_cap",  '_atf_manage_term_lock_cap' );

@@ -146,79 +146,9 @@ class Adv_Term_Fields_Locks extends Advanced_Term_Fields
 		$this->check_term_delete();
 		$this->check_edit_screen();
 		$this->check_term_update();
-
-		#$this->remove_bulk_actions( $this->allowed_taxonomies );
+		//$this->manage_term_lock_caps();
 	}
 
-public function remove_bulk_actions( $allowed_taxonomies )
-{
-	if ( ! empty( $allowed_taxonomies ) ) :
-		foreach ( $allowed_taxonomies as $tax_name ) {
-			add_filter( "manage_edit-{$tax_name}_columns", array( $this, 'remove_cb_col' ) );
-			add_filter( "manage_{$tax_name}_custom_column", array( $this, 'redo_cb_column' ), 10, 3 );
-		}
-	endif;
-
-	return $allowed_taxonomies;
-}
-
-public function remove_cb_col( $columns )
-{
-	$new = array();
-
-	unset( $columns['cb'] );
-
-	foreach( $columns as $key => $title ){
-		if( 'name' === $key ) {
-			$new['atf-cb'] = '<input type="checkbox" />';
-		}
-		$new[$key] = $title;
-	}
-
-	return $new;
-}
-
-public function redo_cb_column( $empty = '', $column_name = '', $term_id = 0 )
-{
-	if ( empty( $_REQUEST['taxonomy'] ) || ( 'atf-cb' !== $column_name ) || ! empty( $empty ) ) {
-		return;
-	}
-
-	$taxonomy = $this->get_current_taxonomy();
-	$tag = get_term( $term_id, $taxonomy );
-	$default_term = get_option( 'default_' . $taxonomy );
-	$lock = get_term_meta( $term_id, $this->meta_key, true );
-
-	// if the current user can delete terms
-	if ( current_user_can( get_taxonomy( $taxonomy )->cap->delete_terms ) && $term_id != $default_term ) :
-	
-		// if the current user can delete THIS term
-		$cap = apply_filters( "atf_locks_term_delete_cap", "manage_others_term_locks" );
-		$user_can_delete = $this->_user_can( $cap, $term_id, $taxonomy, $lock );
-		
-		if ( $user_can_delete ) {
-
-			$field = sprintf( '<label class="screen-reader-text" for="cb-select-%1$s">%2$s %3$s</label>',
-				$term_id,
-				__('Select', 'atf-locks'),
-				$tag->name
-			);
-
-			$field .= sprintf( '<input type="checkbox" name="delete_tags[]" value="%1$d" id="cb-select-%1$d" />',
-				$term_id
-			);
-
-			return $field;
-		
-		};
-
-	endif;
-
-return '&nbsp;';
-
-
-
-}
 
 
 	/**
@@ -361,7 +291,7 @@ return '&nbsp;';
 	public function admin_head_styles()
 	{
 		ob_start();
-		include dirname( $this->file ) . "/css/admin.css";
+		include dirname( $this->file ) . '/css/admin.css';
 		$css = ob_get_contents();
 		ob_end_clean();
 
@@ -885,6 +815,41 @@ return '&nbsp;';
 	}
 
 
-
-
-}
+	/**
+	 * Filters term lock capabilities
+	 *
+	 * @see Adv_Term_Fields_Locks::maybe_add_lock_cap()
+	 *
+	 * @access public
+	 *
+	 * @since 0.1.0
+	 *
+	 * @return void
+	 */
+	public function manage_term_lock_caps()
+	{
+		add_filter( 'atf_locks_term_delete_cap', array( $this, 'maybe_add_lock_cap' ) );
+		add_filter( 'atf_locks_term_manage_cap', array( $this, 'maybe_add_lock_cap' ) );
+		add_filter( 'atf_locks_term_update_cap', array( $this, 'maybe_add_lock_cap' ) );
+	}
+	
+	
+	/**
+	 * Sets the capability for managing terms with term locks
+	 *
+	 * @since 0.1.0
+	 *
+	 * @param string $cap The capability being filtered.  Default is "manage_others_term_locks".
+	 *
+	 * @return string $cap The filtered capability.
+	 */
+	public function maybe_add_lock_cap( $cap )
+	{
+		if( is_super_admin() ) {
+			return 'manage_categories';
+		}
+		return $cap;
+	}
+	
+	
+}	

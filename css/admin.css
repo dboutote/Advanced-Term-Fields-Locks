@@ -4,7 +4,7 @@
 	#the-list .dashicons-lock,
 	#the-list .dashicons-unlock{ font-size: 85%; height: auto; width: auto; }
 	.row-title .dashicons-unlock,
-	#the-list .dashicons-unlock { font-size: 75%;}	
+	#the-list .dashicons-unlock { font-size: 75%;}
 	.inline-edit-row span.term-locked-err {
 		background-color: #fbeaea;
 		border: 1px solid #dc3232;
@@ -12,45 +12,4 @@
 		display: inline-block;
 		padding: 2px 10px;
 	}
-	
-
-
-.widefat .column-atf-cb {
-    padding: 6px 0 25px;
-    vertical-align: top;
-    width: 2.2em;
-}
-
-.widefat tbody td.column-atf-cb {
-    padding: 9px 0 22px;
-}
-
-.widefat thead th.column-atf-cb, 
-.widefat tbody td.column-atf-cb, 
-.widefat tfoot th.column-atf-cb {
-    padding: 11px 0 0 3px;
-}
-
-.widefat thead th.column-atf-cb, 
-.widefat tfoot th.column-atf-cb {
-    padding-top: 4px;
-    vertical-align: middle;
-}
-
-.widefat .column-atf-cb input {
-    margin: -1px 0 0 8px;
-    padding: 0;
-    vertical-align: text-top;
-}
-
-
-
-
-
-	
-	
-	
-	
-	
-	
 </style>
