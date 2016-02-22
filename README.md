@@ -28,7 +28,7 @@ This is an extension of the **Advanced Term Fields** framework.  To use, the Adv
 * On WP: [Advanced Term Fields](https://wordpress.org/plugins/advanced-term-fields/)
 * On GitHub: [Advanced Term Fields](https://github.com/dboutote/Advanced-Term-Fields)
 
-Once you've installed and activated the `ATF` and `ATF: Locks` plugins, you should see a new form field in your edit tags screen:
+Once you've installed and activated the _ATF_ and _ATF: Locks_ plugins, you should see a new form field in your edit tags screen:
 
 ![Form field on Add Tag form](assets/screenshot-2.jpg?raw=true "New form field")
 
